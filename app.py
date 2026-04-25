@@ -2,9 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 
 # --- CONFIGURARE PAGINĂ ---
-st.set_page_config(page_title="Vinted Pro Style", page_icon="👗", layout="centered")
+st.set_page_config(page_title="Vinted Pro Style 2026", page_icon="👗", layout="centered")
 
-# CSS corectat (am schimbat unsafe_allow_index cu unsafe_allow_html la final)
 st.markdown("""
     <style>
     .stApp { background-color: #f8f9fa; }
@@ -25,8 +24,9 @@ st.markdown("""
         border-radius: 20px;
         border: 1px solid #e0e0e0;
         box-shadow: 0px 4px 12px rgba(0,0,0,0.05);
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         color: #333;
+        line-height: 1.6;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -35,50 +35,60 @@ st.markdown("""
 def generate_vinted_text(api_key, data):
     try:
         genai.configure(api_key=api_key)
-        # Folosim varianta cea mai sigură de nume pentru model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Am actualizat modelul la versiunea 2.0 Flash, care este mult mai stabilă acum
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         prompt = f"""
-        Ești un expert în vânzări pe Vinted cu stil {data['stil']}. 
-        Creează o descriere pentru: {data['nume']}.
-        Detalii: Brand: {data['brand']}, Mărime: {data['marime']}, Stare: {data['stare']}, Preț: {data['pret']}.
-        Info extra: {data['detalii']}.
-        Folosește emoji-uri, bullet points și un ton care să convingă cumpărătorul.
-        Adaugă 5 hashtag-uri la final.
+        Ești un vânzător de elită pe Vinted. Stilul tău este {data['stil']}.
+        Produs: {data['nume']}
+        Brand: {data['brand']} | Mărime: {data['marime']} | Stare: {data['stare']} | Preț: {data['pret']}
+        Detalii importante: {data['detalii']}
+        
+        Cerințe:
+        1. Structură clară cu emoji-uri.
+        2. Ton prietenos și convingător.
+        3. Menționează că livrarea se face rapid.
+        4. Adaugă 5 hashtag-uri relevante.
         """
+        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"Atenție! AI-ul a raportat o eroare: {str(e)}"
+        # Dacă nici 2.0 nu merge, încercăm varianta "flash-latest" automat
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            response = model.generate_content(prompt)
+            return response.text
+        except:
+            return f"Eroare tehnică: {str(e)}. Verifică dacă ai activat Gemini API în Google AI Studio."
 
-# --- UI APLICAȚIE ---
+# --- UI ---
 st.title("👗 Vinted AI Stylist")
-st.write("Creează descrieri care vând, în câteva secunde!")
+st.write("Generăm descrieri profesionale în timp ce tu pregătești coletul.")
 
 with st.sidebar:
     st.header("🔑 Setări")
-    api_key = st.text_input("Cheie API Google:", type="password", help="Ia cheia de pe AI Studio")
-    st.divider()
-    st.caption("Aplicația ta este acum live! 🚀")
+    api_key = st.text_input("Cheie API Google:", type="password")
+    st.info("Sfat: Folosește Gemini 2.0 pentru rezultate mai bune.")
 
-# Layout Formular
 col1, col2 = st.columns(2)
 with col1:
-    nume = st.text_input("📦 Produs", placeholder="ex: Rochie de vară")
-    brand = st.text_input("🏷️ Brand", placeholder="ex: H&M")
+    nume = st.text_input("📦 Ce vinzi?", placeholder="ex: Blazer elegant")
+    brand = st.text_input("🏷️ Brand", placeholder="ex: Massimo Dutti")
 with col2:
-    marime = st.text_input("📏 Mărime", placeholder="ex: S / 36")
-    pret = st.text_input("💰 Preț", placeholder="ex: 45 RON")
+    marime = st.text_input("📏 Mărime", placeholder="ex: L / 40")
+    pret = st.text_input("💰 Preț", placeholder="ex: 120 RON")
 
-stare = st.select_slider("💎 Stare produs", options=["Satisfăcătoare", "Bună", "Foarte bună", "Nou fără etichetă", "Nou cu etichetă"])
-stil = st.radio("🎨 Tonul descrierii", ["Persuasiv", "Minimalist", "Prietenos"], horizontal=True)
-detalii = st.text_area("📝 Alte detalii (material, defecte, etc.)")
+stare = st.select_slider("💎 Stare", options=["Satisfăcătoare", "Bună", "Foarte bună", "Nou fără etichetă", "Nou cu etichetă"])
+stil = st.radio("🎨 Stil text", ["Persuasiv", "Minimalist", "Prietenos"], horizontal=True)
+detalii = st.text_area("📝 Detalii extra (material, defecte)")
 
-if st.button("🚀 GENEREAZĂ DESCRIEREA"):
+if st.button("🚀 GENEREAZĂ"):
     if not api_key:
-        st.error("Te rugăm să introduci cheia API în meniul din stânga!")
+        st.error("Introdu cheia API!")
     elif not nume:
-        st.warning("Te rog introdu numele produsului.")
+        st.warning("Introdu numele produsului!")
     else:
         with st.spinner("🪄 Se scrie descrierea..."):
             text_final = generate_vinted_text(api_key, {
@@ -86,5 +96,5 @@ if st.button("🚀 GENEREAZĂ DESCRIEREA"):
                 "pret": pret, "stare": stare, "stil": stil, "detalii": detalii
             })
             st.markdown("### ✨ Rezultat:")
-            # Afișăm rezultatul frumos în cutia noastră stilizată
             st.markdown(f'<div class="description-box">{text_final}</div>', unsafe_allow_html=True)
+        

@@ -1,50 +1,88 @@
 import streamlit as st
 import google.generativeai as genai
 
-# Configurare Pagina
-st.set_page_config(page_title="Vinted Pro Seller Tool", page_icon="🛍️")
+# --- CONFIGURARE PAGINĂ ---
+st.set_page_config(page_title="Vinted Pro Style", page_icon="👗", layout="centered")
 
-# Titlu și Design
-st.title("🛍️ Generator de Descrieri Vinted AI")
-st.markdown("Introdu detaliile mai jos și lasă AI-ul să facă magia!")
+# CSS pentru un look de "App de mobil"
+st.markdown("""
+    <style>
+    .stApp { background-color: #f8f9fa; }
+    .stButton>button {
+        width: 100%;
+        border-radius: 25px;
+        background: linear-gradient(90deg, #008291, #00a5b5);
+        color: white;
+        font-weight: bold;
+        border: none;
+        padding: 10px;
+        transition: 0.3s;
+    }
+    .stButton>button:hover { transform: scale(1.02); background: #005f69; }
+    .description-box {
+        background-color: white;
+        padding: 25px;
+        border-radius: 20px;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.05);
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    </style>
+    """, unsafe_allow_index=True)
 
-# Introducerea cheii API (o vei pune aici)
-api_key = st.text_input("Introdu Cheia ta Google API:", type="password")
+# --- FUNCȚIE GENERARE ---
+def generate_vinted_text(api_key, data):
+    try:
+        genai.configure(api_key=api_key)
+        # Am adăugat prefixul 'models/' care rezolvă eroarea NotFound
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        
+        prompt = f"""
+        Ești un expert în vânzări pe Vinted cu stil {data['stil']}. 
+        Creează o descriere pentru: {data['nume']}.
+        Detalii: Brand: {data['brand']}, Mărime: {data['marime']}, Stare: {data['stare']}, Preț: {data['pret']}.
+        Info extra: {data['detalii']}.
+        Folosește emoji-uri, bullet points și un ton care să convingă cumpărătorul.
+        Adaugă 5 hashtag-uri la final.
+        """
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Eroare la AI: {str(e)}"
 
-if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+# --- UI APLICAȚIE ---
+st.title("👗 Vinted AI Stylist")
+st.write("Completează datele și obține descrierea perfectă!")
 
-    # Interfața de tip Formular
-    col1, col2 = st.columns(2)
+with st.sidebar:
+    st.header("🔑 Setări")
+    api_key = st.text_input("Cheie API Google:", type="password", help="Ia cheia de pe AI Studio")
+    st.divider()
+    st.caption("Creat pentru succesul tău pe Vinted! ✨")
 
-    with col1:
-        nume = st.text_input("Ce vinzi?", placeholder="ex: Geacă de piele Levi's")
-        brand = st.text_input("Brand", placeholder="ex: Levi's")
-        pret = st.text_input("Preț (RON/EUR)", placeholder="ex: 150 RON")
+# Layout Formular
+col1, col2 = st.columns(2)
+with col1:
+    nume = st.text_input("📦 Produs", placeholder="ex: Rochie de vară")
+    brand = st.text_input("🏷️ Brand", placeholder="ex: H&M")
+with col2:
+    marime = st.text_input("📏 Mărime", placeholder="ex: S / 36")
+    pret = st.text_input("💰 Preț", placeholder="ex: 45 RON")
 
-    with col2:
-        stare = st.selectbox("Starea produsului", ["Nou cu etichetă", "Nou fără etichetă", "Foarte bună", "Bună", "Satisfăcătoare"])
-        marime = st.text_input("Mărime", placeholder="ex: M / 38")
-        stil = st.multiselect("Stil / Vibes", ["Vintage", "Casual", "Elegant", "Sport", "Streetwear", "Minimalist"])
+stare = st.select_slider("💎 Stare produs", options=["Satisfăcătoare", "Bună", "Foarte bună", "Nou fără etichetă", "Nou cu etichetă"])
+stil = st.radio("🎨 Tonul descrierii", ["Persuasiv", "Minimalist", "Prietenos"], horizontal=True)
+detalii = st.text_area("📝 Alte detalii (material, defecte, etc.)")
 
-    defecte = st.text_area("Defecte sau detalii extra", placeholder="ex: Are o mică pată pe mâneca stângă, invizibilă la purtare.")
-
-    # Butonul Magic
-    if st.button("✨ Generează Descrierea"):
-        if nume:
-            with st.spinner('AI-ul scrie descrierea...'):
-                prompt = f"""
-                Ești un vânzător de top pe Vinted. Scrie o descriere extrem de atractivă, 
-                onestă și structurată pentru: {nume}.
-                Brand: {brand}, Mărime: {marime}, Stare: {stare}, Preț: {pret}.
-                Detalii suplimentare: {defecte}. Stil: {', '.join(stil)}.
-                Folosește emoji-uri, bullet points și un ton prietenos. 
-                Include și 5 hashtag-uri relevante la final.
-                """
-                response = model.generate_content(prompt)
-                
-                st.success("Gata! Iată descrierea ta:")
-                st.text_area("Copy-Paste de aici:", value=response.text, height=300)
-        else:
-            st.error("Te rog introdu măcar numele produsului!")
+if st.button("🚀 GENEREAZĂ DESCRIEREA"):
+    if not api_key:
+        st.error("Lipsesc 'cheile de la mașină'! Pune cheia API în stânga.")
+    elif not nume:
+        st.warning("Spune-mi măcar ce vinzi!")
+    else:
+        with st.spinner("🪄 Se scrie descrierea..."):
+            text_final = generate_vinted_text(api_key, {
+                "nume": nume, "brand": brand, "marime": marime, 
+                "pret": pret, "stare": stare, "stil": stil, "detalii": detalii
+            })
+            st.markdown("### ✨ Gata de publicat:")
+            st.markdown(f'<div class="description-box">{text_final}</div>', unsafe_allow_index=True)

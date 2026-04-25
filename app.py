@@ -31,13 +31,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNCȚIE GENERARE ---
+# --- FUNCȚIE GENERARE (STABILIZATĂ PE 1.5 FLASH) ---
 def generate_vinted_text(api_key, data):
     try:
         genai.configure(api_key=api_key)
-        
-        # Am actualizat modelul la versiunea 2.0 Flash, care este mult mai stabilă acum
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Modelul 1.5 Flash este cel mai stabil pentru planul gratuit (Free Tier)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
         Ești un vânzător de elită pe Vinted. Stilul tău este {data['stil']}.
@@ -45,32 +44,22 @@ def generate_vinted_text(api_key, data):
         Brand: {data['brand']} | Mărime: {data['marime']} | Stare: {data['stare']} | Preț: {data['pret']}
         Detalii importante: {data['detalii']}
         
-        Cerințe:
-        1. Structură clară cu emoji-uri.
-        2. Ton prietenos și convingător.
-        3. Menționează că livrarea se face rapid.
-        4. Adaugă 5 hashtag-uri relevante.
+        Cerințe: Structură clară, emoji-uri, ton convingător și 5 hashtag-uri.
         """
         
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        # Dacă nici 2.0 nu merge, încercăm varianta "flash-latest" automat
-        try:
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
-            response = model.generate_content(prompt)
-            return response.text
-        except:
-            return f"Eroare tehnică: {str(e)}. Verifică dacă ai activat Gemini API în Google AI Studio."
+        return f"Așteaptă 60 de secunde și încearcă iar. Eroare: {str(e)}"
 
 # --- UI ---
 st.title("👗 Vinted AI Stylist")
-st.write("Generăm descrieri profesionale în timp ce tu pregătești coletul.")
+st.write("Generăm descrieri profesionale instant.")
 
 with st.sidebar:
     st.header("🔑 Setări")
     api_key = st.text_input("Cheie API Google:", type="password")
-    st.info("Sfat: Folosește Gemini 2.0 pentru rezultate mai bune.")
+    st.info("Folosim modelul 1.5 Flash pentru stabilitate.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -86,7 +75,7 @@ detalii = st.text_area("📝 Detalii extra (material, defecte)")
 
 if st.button("🚀 GENEREAZĂ"):
     if not api_key:
-        st.error("Introdu cheia API!")
+        st.error("Introdu cheia API în stânga!")
     elif not nume:
         st.warning("Introdu numele produsului!")
     else:
@@ -97,4 +86,3 @@ if st.button("🚀 GENEREAZĂ"):
             })
             st.markdown("### ✨ Rezultat:")
             st.markdown(f'<div class="description-box">{text_final}</div>', unsafe_allow_html=True)
-        
